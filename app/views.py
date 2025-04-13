@@ -1,14 +1,10 @@
-"""
-Flask Documentation:     https://flask.palletsprojects.com/
-Jinja2 Documentation:    https://jinja.palletsprojects.com/
-Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
-This file creates your application.
-"""
-
 from app import app
 from flask import render_template, request, jsonify, send_file
 import os
-
+from werkzeug.utils import secure_filename
+from app.forms import MovieForm
+from app.models import Movie, db
+from flask_wtf.csrf import generate_csrf
 
 ###
 # Routing for your application.
@@ -56,8 +52,50 @@ def add_header(response):
     response.headers['Cache-Control'] = 'public, max-age=0'
     return response
 
+@app.route('/api/v1/movies', methods=['POST'])
+def movies():
+    form = MovieForm()
 
-@app.errorhandler(404)
-def page_not_found(error):
-    """Custom 404 page."""
-    return render_template('404.html'), 404
+    if form.validate_on_submit():
+        title = form.title.data
+        description = form.description.data
+        poster = form.poster.data
+
+        filename = secure_filename(poster.filename)
+        poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+        new_movie = Movie(title=title, description=description, poster=filename)
+        db.session.add(new_movie)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Movie successfully added",
+            "title": title,
+            "poster": filename,
+            "description": description
+        }), 201
+    else:
+        return jsonify({"errors": form_errors(form)}), 400
+
+@app.route('/api/v1/movies', methods=['GET'])
+def get_movies():
+    movies = Movie.query.all()
+    movie_list = []
+
+    for movie in movies:
+        movie_list.append({
+            "id": movie.id,
+            "title": movie.title,
+            "description": movie.description,
+            "poster": f"/api/v1/posters/{movie.poster}"
+        })
+
+    return jsonify({"movies": movie_list})
+
+@app.route('/api/v1/posters/<filename>')
+def get_poster(filename):
+    return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+@app.route('/api/v1/csrf-token', methods=['GET'])
+def get_csrf():
+    return jsonify({'csrf_token': generate_csrf()})
