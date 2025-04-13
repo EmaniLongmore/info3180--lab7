@@ -11,4 +11,5 @@ class Config(object):
  
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql://yourusername:yourpassword@localhost/lab5')
     SQLALCHEMY_TRACK_MODIFICATIONS = False  # Disable Flask-SQLAlchemy modification tracking to save resources
+    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 

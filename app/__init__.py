@@ -13,4 +13,6 @@ migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
 CORS(app, supports_credentials=True)
 
+csrf.init_app(app)
+
 from app import views, models
